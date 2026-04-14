@@ -20,8 +20,6 @@ void application(hardware_map_t& hardware_map)
   auto& scl_pin  = *hardware_map.pin1;
   auto& servo    = *hardware_map.servo;
 
-  // NOTE: hal::soft::bit_bang_i2c is the correct modern libhal type.
-  // The old hal::bit_bang_i2c no longer exists.
   static hal::soft::bit_bang_i2c i2c(
     hal::soft::bit_bang_i2c::pins{
       .sda = &sda_pin,
@@ -31,24 +29,25 @@ void application(hardware_map_t& hardware_map)
 
   auto mpu = mpu6050(clock, i2c);
 
-  hal::print(terminal, "Self-leveling started!\n");
+  constexpr float target_angle = 0.0f;  // change this and recompile
 
-  servo.position(0);
+  hal::print<64>(terminal, "Target: %f deg\n", target_angle);
+  hal::print(terminal, "Starting stabilization...\n");
 
   while (true) {
-    float angle = mpu.calculate_roll_angle();
+    float roll  = mpu.calculate_roll_angle();
+    float error = target_angle - roll;
 
     hal::print<128>(terminal,
-                    "Accel X: %f  Y: %f  Z: %f  |  Roll Angle: %f deg\n",
-                    mpu.accel.accelx,
-                    mpu.accel.accely,
-                    mpu.accel.accelz,
-                    angle);
+                    "Roll: %f  Target: %f  Error: %f\n",
+                    roll,
+                    target_angle,
+                    error);
 
     try {
-      servo.position(angle);
+      servo.position(error);
     } catch (hal::argument_out_of_domain&) {
-      hal::print(terminal, "Servo angle out of range!\n");
+      hal::print(terminal, "Error exceeds servo range!\n");
     }
 
     hal::delay(clock, 10ms);
