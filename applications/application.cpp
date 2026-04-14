@@ -2,6 +2,7 @@
 #include "../include/mpu6050.hpp"
 #include "resource_list.hpp"
 
+#include <cstdlib>
 #include <libhal-soft/bit_bang_i2c.hpp>
 #include <libhal-util/serial.hpp>
 #include <libhal-util/steady_clock.hpp>
@@ -29,7 +30,10 @@ void application(hardware_map_t& hardware_map)
 
   auto mpu = mpu6050(clock, i2c);
 
-  constexpr float target_angle = 0.0f;  // change this and recompile
+  hal::print(terminal, "Enter target angle (-90 to 90): ");
+  std::array<hal::byte, 8> buf{};
+  terminal.read(buf);
+  float target_angle = std::strtof(reinterpret_cast<const char*>(buf.data()), nullptr);
 
   hal::print<64>(terminal, "Target: %f deg\n", target_angle);
   hal::print(terminal, "Starting stabilization...\n");
